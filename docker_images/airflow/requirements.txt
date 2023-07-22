@@ -1,0 +1,5 @@
+#apache-airflow-providers-apache-spark
+apache-airflow[amazon]
+apache-airflow-providers-amazon
+pandas
+psycopg2-binary
