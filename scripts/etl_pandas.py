@@ -153,36 +153,6 @@ class ETL_Final(ETL_Pandas):
                                   'tipo_cambio_bna_vendedor': DECIMAL(5,2), 
                                   'process_date': VARCHAR(10)})
         
-        # df_tipo_cambio.write \
-        #     .format("jdbc") \
-        #     .option("url", env['REDSHIFT_URL']) \
-        #     .option("dbtable", f"{env['REDSHIFT_SCHEMA']}.tipo_de_cambio") \
-        #     .option("user", env['REDSHIFT_USER']) \
-        #     .option("password", env['REDSHIFT_PASSWORD']) \
-        #     .option("driver", "org.postgresql.Driver") \
-        #     .mode("append") \
-        #     .save()
-        
-        # df_ipc.write \
-        #     .format("jdbc") \
-        #     .option("url", env['REDSHIFT_URL']) \
-        #     .option("dbtable", f"{env['REDSHIFT_SCHEMA']}.ipc_nacional") \
-        #     .option("user", env['REDSHIFT_USER']) \
-        #     .option("password", env['REDSHIFT_PASSWORD']) \
-        #     .option("driver", "org.postgresql.Driver") \
-        #     .mode("append") \
-        #     .save()
-        
-        # df_analisis.write \
-        #     .format("jdbc") \
-        #     .option("url", env['REDSHIFT_URL']) \
-        #     .option("dbtable", f"{env['REDSHIFT_SCHEMA']}.analisis_economico") \
-        #     .option("user", env['REDSHIFT_USER']) \
-        #     .option("password", env['REDSHIFT_PASSWORD']) \
-        #     .option("driver", "org.postgresql.Driver") \
-        #     .mode("append") \
-        #     .save()
-        
         print(">>> [L] Datos cargados exitosamente")
 
 
