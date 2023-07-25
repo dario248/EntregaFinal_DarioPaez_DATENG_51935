@@ -1,3 +1,5 @@
+import sqlalchemy
+import pandas as pd
 from os import environ as env
 from psycopg2 import connect
 from sqlalchemy import create_engine
@@ -13,13 +15,25 @@ REDSHIFT_URL = env["REDSHIFT_URL"]
 
 
 class ETL_Pandas:
+    """
+    Clase base de un ETL ejecutado en Pandas
 
+    Attributes
+    ----------
+    job_name: str
+        Nombre de la ejecución del proceso ETL
+
+    Methods
+    -------
+    execute()
+        Realiza la ejecución de extract, transform y load
+    """
     def __init__(self, job_name=None):
         """
         Constructor de la clase, inicializa la sesión de Spark
         """
         print(">>> [init] Inicializando ETL...")
-        self.pyscopg_connection = self.alchemy_engine()
+        self.pyscopg_connection = self._alchemy_engine()
         try:
             # Conectar a Redshift
             print(">>> [init] Conectando a Redshift...")
@@ -38,7 +52,16 @@ class ETL_Pandas:
         except:
             print(">>> [init] No se pudo conectar a Redshift")
 
-    def alchemy_engine(self):
+
+    def _alchemy_engine(self) -> sqlalchemy.engine:
+        """
+        Crea un objeto de conexion con la base de datos de Redshift
+
+        Returns
+        -------
+        sqlalchemy.engine:
+            Objeto de conexión con una base de datos
+        """
         url_object = URL.create(
             "postgresql+psycopg2",
             username=REDSHIFT_USER,
@@ -51,6 +74,7 @@ class ETL_Pandas:
 
         return connection
 
+
     def execute(self, process_date: str):
         """
         Método principal que ejecuta el ETL
@@ -61,28 +85,30 @@ class ETL_Pandas:
         print(">>> [execute] Ejecutando ETL...")
 
         # Extraemos datos de la API
-        df_api = self.extract()
+        df_api = self._extract()
 
         # Transformamos los datos
-        df_transformed = self.transform(df_api)
+        df_transformed = self._transform(df_api)
 
         # Cargamos los datos en Redshift
-        self.load(df_transformed)
+        self._load(df_transformed)
 
     
-    def extract(self):
+    def _extract(self):
         """
         Extrae datos de la API
         """
         print(">>> [E] Extrayendo datos de la API...")
 
-    def transform(self, df_original):
+
+    def _transform(self, df_original: pd.DataFrame):
         """
         Transforma los datos
         """
         print(">>> [T] Transformando datos...")
 
-    def load(self, df_final):
+
+    def _load(self, df_final: pd.DataFrame):
         """
         Carga los datos transformados en Redshift
         """
