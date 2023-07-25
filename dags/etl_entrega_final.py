@@ -21,7 +21,7 @@ def success_callback_function(context: dict) -> None:
     msg = "DAG ran successfully"
     subject = f"DAG {dag_run} has completed"
     send_email(msg, subject)
-        
+
 
 def failure_callback_function(context: dict) -> None:
     """
@@ -50,16 +50,18 @@ def send_email(msg: str, subject: str) -> None:
         Asunto del mail
     """
     try:
-        x=smtplib.SMTP('smtp.gmail.com', 587)
+        x = smtplib.SMTP("smtp.gmail.com", 587)
         x.starttls()
-        x.login(Variable.get('SMTP_EMAIL_FROM'),Variable.get('SMTP_PASSWORD'))
+        x.login(Variable.get("SMTP_EMAIL_FROM"), Variable.get("SMTP_PASSWORD"))
 
-        message='Subject: {}\n\n{}'.format(subject, msg)
-        x.sendmail(Variable.get('SMTP_EMAIL_FROM'), Variable.get('SMTP_EMAIL_TO'), message)
-        print('Exito al enviar el mail')
+        message = "Subject: {}\n\n{}".format(subject, msg)
+        x.sendmail(
+            Variable.get("SMTP_EMAIL_FROM"), Variable.get("SMTP_EMAIL_TO"), message
+        )
+        print("Exito al enviar el mail")
     except Exception as exception:
         print(exception)
-        print('Fallo al enviar el mail')
+        print("Fallo al enviar el mail")
 
 
 def get_process_date(**kwargs):
@@ -89,8 +91,8 @@ def check_dolar_values(ti: dict) -> None:
         Diccionario con referencias a los objetos de la task
     """
     # Obtiene la cantidad de casos que han superado el umbral del return de la tarea pandas_etl
-    dolar_flag = ti.xcom_pull(task_ids='pandas_etl')
-    if dolar_flag >= Variable.get('DOLAR_FLAG_THRESHOLD'):
+    dolar_flag = ti.xcom_pull(task_ids="pandas_etl")
+    if dolar_flag >= Variable.get("DOLAR_FLAG_THRESHOLD"):
         msg = "Anda a comprar dolares"
         subject = "Posible aumento importante del dolar"
         send_email(msg, subject)
@@ -111,9 +113,8 @@ with DAG(
     catchup=False,
     on_success_callback=success_callback_function,
     on_failure_callback=failure_callback_function,
-    template_searchpath = [f'{Variable.get("python_scripts_dir")}/']
+    template_searchpath=[f'{Variable.get("python_scripts_dir")}/'],
 ) as dag:
-    
     # Tareas
     get_process_date_task = PythonOperator(
         task_id="get_process_date",
@@ -125,14 +126,14 @@ with DAG(
     create_table_cambio = SQLExecuteQueryOperator(
         task_id="create_table_cambio",
         conn_id="redshift_default",
-        sql='query_create_table_cambio.sql',
+        sql="query_create_table_cambio.sql",
         dag=dag,
     )
 
     create_table_ipc = SQLExecuteQueryOperator(
         task_id="create_table_ipc",
         conn_id="redshift_default",
-        sql='query_create_table_ipc.sql',
+        sql="query_create_table_ipc.sql",
         dag=dag,
     )
 
@@ -157,4 +158,11 @@ with DAG(
         dag=dag,
     )
 
-    get_process_date_task >> create_table_cambio >> create_table_ipc >> create_table_analisis >> pandas_etl >> check_dolar_values_task 
+    (
+        get_process_date_task
+        >> create_table_cambio
+        >> create_table_ipc
+        >> create_table_analisis
+        >> pandas_etl
+        >> check_dolar_values_task
+    )

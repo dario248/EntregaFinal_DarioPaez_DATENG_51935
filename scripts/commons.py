@@ -28,6 +28,7 @@ class ETL_Pandas:
     execute()
         Realiza la ejecución de extract, transform y load
     """
+
     def __init__(self, job_name=None):
         """
         Constructor de la clase, inicializa la sesión de Spark
@@ -52,7 +53,6 @@ class ETL_Pandas:
         except:
             print(">>> [init] No se pudo conectar a Redshift")
 
-
     def _alchemy_engine(self) -> sqlalchemy.engine:
         """
         Crea un objeto de conexion con la base de datos de Redshift
@@ -68,12 +68,11 @@ class ETL_Pandas:
             password=REDSHIFT_PASSWORD,
             host=REDSHIFT_HOST,
             database=REDSHIFT_DB,
-            port=REDSHIFT_PORT
+            port=REDSHIFT_PORT,
         )
         connection = create_engine(url_object)
 
         return connection
-
 
     def execute(self, process_date: str):
         """
@@ -93,20 +92,17 @@ class ETL_Pandas:
         # Cargamos los datos en Redshift
         self._load(df_transformed)
 
-    
     def _extract(self):
         """
         Extrae datos de la API
         """
         print(">>> [E] Extrayendo datos de la API...")
 
-
     def _transform(self, df_original: pd.DataFrame):
         """
         Transforma los datos
         """
         print(">>> [T] Transformando datos...")
-
 
     def _load(self, df_final: pd.DataFrame):
         """
