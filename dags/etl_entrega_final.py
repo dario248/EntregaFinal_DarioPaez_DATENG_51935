@@ -1,7 +1,4 @@
-# Este es el DAG que orquesta el ETL de la tabla users
-import pandas as pd
 from airflow import DAG
-
 from airflow.operators.bash import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
@@ -35,23 +32,47 @@ CREATE TABLE IF NOT EXISTS analisis_economico (
 ) SORTKEY(process_date, date);
 """
 
-QUERY_CLEAN_PROCESS_DATE = """
-DELETE FROM analisis_economico WHERE process_date = '{{ ti.xcom_pull(key="process_date") }}';
-"""
+def success_callback_function(context: dict) -> None:
+    """
+    Callback para enviar mail en caso de exito en la ejecución del DAG
 
-def success_callback_function(context):
+    Parameters
+    ----------
+    context: dict
+        Diccionario con referencias a los objetos de la task
+    """
     dag_run = context.get("dag_run")
     msg = "DAG ran successfully"
     subject = f"DAG {dag_run} has completed"
     send_email(msg, subject)
         
-def failure_callback_function(context):
+
+def failure_callback_function(context: dict) -> None:
+    """
+    Callback para enviar mail en caso de fallo en la ejecución del DAG
+
+    Parameters
+    ----------
+    context: dict
+        Diccionario con referencias a los objetos de la task
+    """
     dag_run = context.get("dag_run")
     msg = "DAG ran failed"
     subject = f"DAG {dag_run} has failed"
     send_email(msg, subject)
 
-def send_email(msg, subject):
+
+def send_email(msg: str, subject: str) -> None:
+    """
+    Envia un mail con el mensaje especificado utilizando la configuracion de variables de airflow
+
+    Parameters
+    ----------
+    msg: str
+        Cuerpo del mail
+    subject: str
+        Asunto del mail
+    """
     try:
         x=smtplib.SMTP('smtp.gmail.com', 587)
         x.starttls()
@@ -64,8 +85,11 @@ def send_email(msg, subject):
         print(exception)
         print('Fallo al enviar el mail')
 
-# create function to get process_date and push it to xcom
+
 def get_process_date(**kwargs):
+    """
+    Obtiene la fecha de proceso de la tarea y la guarda en XCOM
+    """
     # If process_date is provided take it, otherwise take today
     if (
         "process_date" in kwargs["dag_run"].conf
@@ -78,12 +102,23 @@ def get_process_date(**kwargs):
         )
     kwargs["ti"].xcom_push(key="process_date", value=process_date)
 
-def check_dolar_values(ti):
+
+def check_dolar_values(ti: dict) -> None:
+    """
+    Comprueba si la condicion de variacion del dolar se cumple para enviar un aviso por mail
+
+    Parameters
+    ----------
+    ti: dict
+        Diccionario con referencias a los objetos de la task
+    """
+    # Obtiene la cantidad de casos que han superado el umbral del return de la tarea pandas_etl
     dolar_flag = ti.xcom_pull(task_ids='pandas_etl')
     if dolar_flag >= Variable.get('DOLAR_FLAG_THRESHOLD'):
         msg = "Anda a comprar dolares"
         subject = "Posible aumento importante del dolar"
         send_email(msg, subject)
+
 
 defaul_args = {
     "owner": "Dario paez",
