@@ -7,30 +7,6 @@ from airflow.models import Variable
 from datetime import datetime, timedelta
 import smtplib
 
-QUERY_CREATE_TABLE_CAMBIO = """
-CREATE TABLE IF NOT EXISTS tipo_de_cambio (
-    date VARCHAR(10),
-    tipo_cambio_bna_vendedor decimal(5,2),
-    process_date VARCHAR(10) distkey
-) SORTKEY(process_date, date);
-"""
-
-QUERY_CREATE_TABLE_IPC = """
-CREATE TABLE IF NOT EXISTS ipc_nacional (
-    date VARCHAR(10),
-    ipc decimal(7,2),
-    process_date VARCHAR(10) distkey
-) SORTKEY(process_date, date);
-"""
-
-QUERY_CREATE_TABLE_ANALISIS = """
-CREATE TABLE IF NOT EXISTS analisis_economico (
-    date VARCHAR(10),
-    ipc decimal(7,2),
-    tipo_cambio_bna_vendedor decimal(5,2),
-    process_date VARCHAR(10) distkey
-) SORTKEY(process_date, date);
-"""
 
 def success_callback_function(context: dict) -> None:
     """
@@ -134,7 +110,8 @@ with DAG(
     schedule_interval="@daily",
     catchup=False,
     on_success_callback=success_callback_function,
-    on_failure_callback=failure_callback_function
+    on_failure_callback=failure_callback_function,
+    template_searchpath = [f'{Variable.get("python_scripts_dir")}/']
 ) as dag:
     
     # Tareas
@@ -148,21 +125,21 @@ with DAG(
     create_table_cambio = SQLExecuteQueryOperator(
         task_id="create_table_cambio",
         conn_id="redshift_default",
-        sql=QUERY_CREATE_TABLE_CAMBIO,
+        sql='query_create_table_cambio.sql',
         dag=dag,
     )
 
     create_table_ipc = SQLExecuteQueryOperator(
         task_id="create_table_ipc",
         conn_id="redshift_default",
-        sql=QUERY_CREATE_TABLE_IPC,
+        sql='query_create_table_ipc.sql',
         dag=dag,
     )
 
     create_table_analisis = SQLExecuteQueryOperator(
         task_id="create_table_analisis",
         conn_id="redshift_default",
-        sql=QUERY_CREATE_TABLE_ANALISIS,
+        sql="query_create_table_analisis.sql",
         dag=dag,
     )
 
