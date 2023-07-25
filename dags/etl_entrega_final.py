@@ -5,11 +5,10 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-
-
 from airflow.models import Variable
 
 from datetime import datetime, timedelta
+import smtplib
 
 QUERY_CREATE_TABLE_CAMBIO = """
 CREATE TABLE IF NOT EXISTS tipo_de_cambio (
@@ -40,6 +39,30 @@ QUERY_CLEAN_PROCESS_DATE = """
 DELETE FROM analisis_economico WHERE process_date = '{{ ti.xcom_pull(key="process_date") }}';
 """
 
+def success_callback_function(context):
+    dag_run = context.get("dag_run")
+    msg = "DAG ran successfully"
+    subject = f"DAG {dag_run} has completed"
+    send_email(msg, subject)
+        
+def failure_callback_function(context):
+    dag_run = context.get("dag_run")
+    msg = "DAG ran failed"
+    subject = f"DAG {dag_run} has failed"
+    send_email(msg, subject)
+
+def send_email(msg, subject):
+    try:
+        x=smtplib.SMTP('smtp.gmail.com', 587)
+        x.starttls()
+        x.login(Variable.get('SMTP_EMAIL_FROM'),Variable.get('SMTP_PASSWORD'))
+
+        message='Subject: {}\n\n{}'.format(subject, msg)
+        x.sendmail(Variable.get('SMTP_EMAIL_FROM'), Variable.get('SMTP_EMAIL_TO'), message)
+        print('Exito al enviar el mail')
+    except Exception as exception:
+        print(exception)
+        print('Fallo al enviar el mail')
 
 # create function to get process_date and push it to xcom
 def get_process_date(**kwargs):
@@ -55,6 +78,12 @@ def get_process_date(**kwargs):
         )
     kwargs["ti"].xcom_push(key="process_date", value=process_date)
 
+def check_dolar_values(ti):
+    dolar_flag = ti.xcom_pull(task_ids='pandas_etl')
+    if dolar_flag >= Variable.get('DOLAR_FLAG_THRESHOLD'):
+        msg = "Anda a comprar dolares"
+        subject = "Posible aumento importante del dolar"
+        send_email(msg, subject)
 
 defaul_args = {
     "owner": "Dario paez",
@@ -69,6 +98,8 @@ with DAG(
     description="ETL de la tablas de índices económicos",
     schedule_interval="@daily",
     catchup=False,
+    on_success_callback=success_callback_function,
+    on_failure_callback=failure_callback_function
 ) as dag:
     
     # Tareas
@@ -102,8 +133,16 @@ with DAG(
 
     pandas_etl = BashOperator(
         task_id="pandas_etl",
-        bash_command=f'python {Variable.get("python_scripts_dir")}/etl_pandas.py',
+        bash_command=f'python {Variable.get("python_scripts_dir")}/etl_pandas.py {Variable.get("dolar_variation_limit")}',
+        dag=dag,
+        do_xcom_push=True,
+    )
+
+    check_dolar_values_task = PythonOperator(
+        task_id="check_dolar_values",
+        python_callable=check_dolar_values,
+        provide_context=True,
         dag=dag,
     )
 
-    get_process_date_task >> create_table_cambio >> create_table_ipc >> create_table_analisis >> pandas_etl
+    get_process_date_task >> create_table_cambio >> create_table_ipc >> create_table_analisis >> pandas_etl >> check_dolar_values_task 

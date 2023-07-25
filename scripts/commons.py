@@ -69,6 +69,7 @@ class ETL_Pandas:
         # Cargamos los datos en Redshift
         self.load(df_transformed)
 
+    
     def extract(self):
         """
         Extrae datos de la API
